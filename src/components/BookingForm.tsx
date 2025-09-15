@@ -134,7 +134,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jam">Jam</Label>
+            <Label htmlFor="jam">Jam (24 Jam)</Label>
             <Input
               id="jam"
               type="time"
@@ -142,6 +142,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
               onChange={(e) => handleInputChange('jam', e.target.value)}
               required
               className="transition-all duration-200 focus:shadow-soft"
+              step="300"
             />
           </div>
 

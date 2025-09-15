@@ -217,7 +217,9 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                         {booking.ruangan}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono">{booking.jam}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {booking.jam}
+                    </TableCell>
                     <TableCell className="max-w-xs truncate" title={booking.keterangan}>
                       {booking.keterangan}
                     </TableCell>
