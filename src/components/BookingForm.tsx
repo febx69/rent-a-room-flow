@@ -14,18 +14,16 @@ interface BookingFormProps {
 }
 
 const ROOMS = [
-  'Ruang Meeting A', 'Ruang Meeting B', 'Ruang Konferensi', 'Auditorium',
-  'Ruang Seminar 1', 'Ruang Seminar 2', 'Ruang Rapat Direksi', 'Ruang Presentasi'
+  'Lantai 1 - Aula Mini',
+  'Lantai 2',
+  'Lantai 3 - Aula Bhakti Husada'
 ];
-
-const FLOORS = ['Lt. 1', 'Lt. 2', 'Lt. 3', 'Lt. 4', 'Lt. 5'];
 
 export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
   const [formData, setFormData] = useState<BookingFormData>({
     tanggal: '',
     namaPeminjam: '',
     ruangan: '',
-    lantai: '',
     jam: '',
     keterangan: ''
   });
@@ -65,7 +63,6 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
         tanggal: '',
         namaPeminjam: '',
         ruangan: '',
-        lantai: '',
         jam: '',
         keterangan: ''
       });
@@ -123,28 +120,14 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ruangan">Ruangan</Label>
+            <Label htmlFor="ruangan">Ruangan/Lantai</Label>
             <Select value={formData.ruangan} onValueChange={(value) => handleInputChange('ruangan', value)}>
               <SelectTrigger className="transition-all duration-200 focus:shadow-soft">
-                <SelectValue placeholder="Pilih ruangan" />
+                <SelectValue placeholder="Pilih ruangan/lantai" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-gray-800 border shadow-lg z-50">
                 {ROOMS.map((room) => (
-                  <SelectItem key={room} value={room}>{room}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lantai">Lantai</Label>
-            <Select value={formData.lantai} onValueChange={(value) => handleInputChange('lantai', value)}>
-              <SelectTrigger className="transition-all duration-200 focus:shadow-soft">
-                <SelectValue placeholder="Pilih lantai" />
-              </SelectTrigger>
-              <SelectContent>
-                {FLOORS.map((floor) => (
-                  <SelectItem key={floor} value={floor}>{floor}</SelectItem>
+                  <SelectItem key={room} value={room} className="hover:bg-gray-100 dark:hover:bg-gray-700">{room}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

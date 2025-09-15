@@ -75,8 +75,7 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
       No: index + 1,
       Tanggal: booking.tanggal,
       'Nama Peminjam': booking.namaPeminjam,
-      Ruangan: booking.ruangan,
-      Lantai: booking.lantai,
+      'Ruangan/Lantai': booking.ruangan,
       Jam: booking.jam,
       Keterangan: booking.keterangan
     }));
@@ -197,11 +196,11 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                     onClick={() => handleSort('ruangan')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span>Ruangan</span>
+                      <span>Ruangan/Lantai</span>
                       <SortIcon field="ruangan" />
                     </div>
                   </TableHead>
-                  <TableHead>Lantai</TableHead>
+                  
                   <TableHead>Jam</TableHead>
                   <TableHead>Keterangan</TableHead>
                   {user?.role === 'admin' && <TableHead className="w-20">Aksi</TableHead>}
@@ -217,9 +216,6 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                       <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                         {booking.ruangan}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{booking.lantai}</Badge>
                     </TableCell>
                     <TableCell className="font-mono">{booking.jam}</TableCell>
                     <TableCell className="max-w-xs truncate" title={booking.keterangan}>
