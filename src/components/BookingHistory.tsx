@@ -76,7 +76,9 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
       Tanggal: booking.tanggal,
       'Nama Peminjam': booking.namaPeminjam,
       'Ruangan/Lantai': booking.ruangan,
-      Jam: booking.jam,
+      'Rentang Jam': booking.jamMulai && booking.jamSelesai 
+        ? `${booking.jamMulai} - ${booking.jamSelesai}`
+        : booking.jam || 'N/A',
       Keterangan: booking.keterangan
     }));
 
@@ -201,7 +203,7 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                     </div>
                   </TableHead>
                   
-                  <TableHead>Jam</TableHead>
+                  <TableHead>Rentang Jam</TableHead>
                   <TableHead>Keterangan</TableHead>
                   {user?.role === 'admin' && <TableHead className="w-20">Aksi</TableHead>}
                 </TableRow>
@@ -218,7 +220,10 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {booking.jam}
+                      {booking.jamMulai && booking.jamSelesai 
+                        ? `${booking.jamMulai} - ${booking.jamSelesai}`
+                        : booking.jam || 'N/A'
+                      }
                     </TableCell>
                     <TableCell className="max-w-xs truncate" title={booking.keterangan}>
                       {booking.keterangan}

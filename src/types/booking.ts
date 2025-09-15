@@ -3,7 +3,9 @@ export interface BookingData {
   tanggal: string;
   namaPeminjam: string;
   ruangan: string;
-  jam: string;
+  jamMulai: string;
+  jamSelesai: string;
+  jam?: string; // For backward compatibility
   keterangan: string;
   createdAt: string;
 }
@@ -12,6 +14,7 @@ export interface BookingFormData {
   tanggal: string;
   namaPeminjam: string;
   ruangan: string;
-  jam: string;
+  jamMulai: string;
+  jamSelesai: string;
   keterangan: string;
 }
