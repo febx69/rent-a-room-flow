@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingForm } from './BookingForm';
 import { BookingHistory } from './BookingHistory';
+import { ActiveBookings } from './ActiveBookings';
 import { LogOut, User, Crown, Building2 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -64,8 +65,12 @@ export const Dashboard: React.FC = () => {
         {/* Booking Form */}
         <BookingForm onBookingAdded={handleBookingAdded} />
         
-        {/* Booking History */}
-        <BookingHistory refreshTrigger={refreshTrigger} />
+        {/* Conditional Content Based on User Role */}
+        {user?.role === 'admin' ? (
+          <BookingHistory refreshTrigger={refreshTrigger} />
+        ) : (
+          <ActiveBookings refreshTrigger={refreshTrigger} />
+        )}
       </main>
 
       {/* Footer */}
@@ -77,7 +82,7 @@ export const Dashboard: React.FC = () => {
               <span>© 2024 Sistem Peminjaman Ruangan</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              Dibuat dengan ❤️ menggunakan React & Tailwind CSS
+              Sistem manajemen peminjaman ruangan yang efisien
             </div>
           </div>
         </div>

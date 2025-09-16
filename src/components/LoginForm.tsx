@@ -99,20 +99,6 @@ export const LoginForm: React.FC = () => {
               )}
             </Button>
           </form>
-          
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground text-center mb-2">Kredensial default:</p>
-            <div className="text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="font-medium">Admin:</span>
-                <span className="font-mono">admin / admin</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">User:</span>
-                <span className="font-mono">user / user</span>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
