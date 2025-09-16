@@ -35,6 +35,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const isValidTime24 = (time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+
+  const normalizeTime = (time: string) => {
+    const safe = time.replace('.', ':').trim();
+    const parts = safe.split(':');
+    if (parts.length !== 2) return time;
+    let [h, m] = parts;
+    h = h.padStart(2, '0');
+    m = m.padStart(2, '0');
+    return `${h.slice(-2)}:${m.slice(0, 2)}`;
+  };
+
   const checkBookingConflict = (newBooking: BookingFormData): string | null => {
     const existingBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
     
@@ -73,9 +85,34 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Normalize and validate 24h time inputs consistently across all devices
+    const start = normalizeTime(formData.jamMulai.trim());
+    const end = normalizeTime(formData.jamSelesai.trim());
+
+    if (!isValidTime24(start) || !isValidTime24(end)) {
+      toast({
+        title: "Format jam tidak valid",
+        description: "Gunakan format 24 jam HH:MM (contoh 08:00).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Optional business constraints
+    const MIN = '06:00';
+    const MAX = '23:00';
+    if (start < MIN || end > MAX) {
+      toast({
+        title: "Di luar jam operasional",
+        description: `Peminjaman hanya diperbolehkan antara ${MIN} - ${MAX}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate time range
-    if (formData.jamSelesai <= formData.jamMulai) {
+    if (end <= start) {
       toast({
         title: "Waktu tidak valid",
         description: "Jam selesai harus lebih besar dari jam mulai.",
@@ -83,9 +120,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
       });
       return;
     }
-    
+
+    const normalizedData: BookingFormData = { ...formData, jamMulai: start, jamSelesai: end };
+
     // Check for booking conflicts
-    const conflictMessage = checkBookingConflict(formData);
+    const conflictMessage = checkBookingConflict(normalizedData);
     if (conflictMessage) {
       toast({
         title: "Peminjaman ditolak",
@@ -94,7 +133,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
       });
       return;
     }
-    
+
     setIsSubmitting(true);
 
     try {
@@ -103,7 +142,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
 
       const bookingData = {
         id: Date.now().toString(),
-        ...formData,
+        ...normalizedData,
         createdAt: new Date().toISOString()
       };
 
@@ -114,7 +153,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
 
       toast({
         title: "Peminjaman berhasil ditambahkan!",
-        description: `Ruang ${formData.ruangan} berhasil dipesan untuk ${formData.tanggal} jam ${formData.jamMulai}-${formData.jamSelesai}`,
+        description: `Ruang ${normalizedData.ruangan} berhasil dipesan untuk ${normalizedData.tanggal} jam ${normalizedData.jamMulai}-${normalizedData.jamSelesai}`,
       });
 
       // Reset form
@@ -197,16 +236,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
             <Label htmlFor="jamMulai">Jam Mulai</Label>
             <Input
               id="jamMulai"
-              type="time"
+              type="text"
+              placeholder="HH:MM"
+              inputMode="numeric"
+              pattern="^([01]\\d|2[0-3]):([0-5]\\d)$"
+              title="Gunakan format 24 jam HH:MM"
               value={formData.jamMulai}
               onChange={(e) => handleInputChange('jamMulai', e.target.value)}
+              onBlur={(e) => handleInputChange('jamMulai', normalizeTime(e.target.value))}
               required
               className="transition-all duration-200 focus:shadow-soft"
-              step="300"
-              min="06:00"
-              max="22:00"
-              lang="en-GB"
-              data-format="24"
             />
           </div>
 
@@ -214,16 +253,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
             <Label htmlFor="jamSelesai">Jam Selesai</Label>
             <Input
               id="jamSelesai"
-              type="time"
+              type="text"
+              placeholder="HH:MM"
+              inputMode="numeric"
+              pattern="^([01]\\d|2[0-3]):([0-5]\\d)$"
+              title="Gunakan format 24 jam HH:MM"
               value={formData.jamSelesai}
               onChange={(e) => handleInputChange('jamSelesai', e.target.value)}
+              onBlur={(e) => handleInputChange('jamSelesai', normalizeTime(e.target.value))}
               required
               className="transition-all duration-200 focus:shadow-soft"
-              step="300"
-              min="06:00"
-              max="23:00"
-              lang="en-GB"
-              data-format="24"
             />
           </div>
 
