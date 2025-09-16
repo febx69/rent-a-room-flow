@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, CalendarDays } from 'lucide-react';
+import { TimePicker24 } from './TimePicker24';
 import { BookingFormData } from '@/types/booking';
 
 interface BookingFormProps {
@@ -233,36 +234,26 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jamMulai">Jam Mulai</Label>
-            <Input
+            <TimePicker24
               id="jamMulai"
-              type="text"
-              placeholder="HH:MM"
-              inputMode="numeric"
-              pattern="^([01]\\d|2[0-3]):([0-5]\\d)$"
-              title="Gunakan format 24 jam HH:MM"
+              label="Jam Mulai"
               value={formData.jamMulai}
-              onChange={(e) => handleInputChange('jamMulai', e.target.value)}
-              onBlur={(e) => handleInputChange('jamMulai', normalizeTime(e.target.value))}
-              required
-              className="transition-all duration-200 focus:shadow-soft"
+              onChange={(val) => handleInputChange('jamMulai', val)}
+              min="06:00"
+              max="22:00"
+              stepMinutes={5}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jamSelesai">Jam Selesai</Label>
-            <Input
+            <TimePicker24
               id="jamSelesai"
-              type="text"
-              placeholder="HH:MM"
-              inputMode="numeric"
-              pattern="^([01]\\d|2[0-3]):([0-5]\\d)$"
-              title="Gunakan format 24 jam HH:MM"
+              label="Jam Selesai"
               value={formData.jamSelesai}
-              onChange={(e) => handleInputChange('jamSelesai', e.target.value)}
-              onBlur={(e) => handleInputChange('jamSelesai', normalizeTime(e.target.value))}
-              required
-              className="transition-all duration-200 focus:shadow-soft"
+              onChange={(val) => handleInputChange('jamSelesai', val)}
+              min="06:00"
+              max="23:00"
+              stepMinutes={5}
             />
           </div>
 
