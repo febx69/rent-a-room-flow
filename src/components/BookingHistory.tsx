@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Download, Trash2, History, ChevronUp, ChevronDown } from 'lucide-react';
@@ -19,6 +20,8 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof BookingData>('tanggal');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -60,7 +63,14 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
   }, [bookings, searchTerm, sortField, sortDirection]);
 
   const handleDelete = (id: string) => {
-    const updatedBookings = bookings.filter(booking => booking.id !== id);
+    setBookingToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!bookingToDelete) return;
+    
+    const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete);
     setBookings(updatedBookings);
     localStorage.setItem('roomBookings', JSON.stringify(updatedBookings));
     
@@ -68,6 +78,9 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
       title: "Peminjaman dihapus",
       description: "Data peminjaman berhasil dihapus dari sistem.",
     });
+    
+    setDeleteDialogOpen(false);
+    setBookingToDelete(null);
   };
 
   const handleExportExcel = () => {
@@ -247,6 +260,23 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
           </div>
         )}
       </CardContent>
+      
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus data peminjaman ini? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

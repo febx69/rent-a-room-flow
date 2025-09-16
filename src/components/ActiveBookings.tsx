@@ -89,7 +89,7 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
               <Clock className="h-5 w-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-xl">Peminjaman Aktif Hari Ini</CardTitle>
+              <CardTitle className="text-xl">Peminjaman Aktif</CardTitle>
               <CardDescription>
                 {filteredBookings.length} peminjaman yang sedang berlangsung
               </CardDescription>

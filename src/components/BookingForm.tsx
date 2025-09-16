@@ -194,7 +194,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jamMulai">Jam Mulai (Format 24 Jam)</Label>
+            <Label htmlFor="jamMulai">Jam Mulai</Label>
             <Input
               id="jamMulai"
               type="time"
@@ -205,11 +205,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
               step="300"
               min="06:00"
               max="22:00"
+              lang="en-GB"
+              data-format="24"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="jamSelesai">Jam Selesai (Format 24 Jam)</Label>
+            <Label htmlFor="jamSelesai">Jam Selesai</Label>
             <Input
               id="jamSelesai"
               type="time"
@@ -220,6 +222,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
               step="300"
               min="06:00"
               max="23:00"
+              lang="en-GB"
+              data-format="24"
             />
           </div>
 
