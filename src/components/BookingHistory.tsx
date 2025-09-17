@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Download, Trash2, History, ChevronUp, ChevronDown } from 'lucide-react';
 import { BookingData } from '@/types/booking';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface BookingHistoryProps {
@@ -32,34 +32,28 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
 
   const loadBookings = async () => {
     try {
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase
-          .from('bookings')
-          .select('*')
-          .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error loading bookings:', error);
-          return;
-        }
-
-        const transformedData = data?.map(booking => ({
-          id: booking.id,
-          tanggal: booking.tanggal,
-          namaPeminjam: booking.nama_peminjam,
-          ruangan: booking.ruangan,
-          jamMulai: booking.jam_mulai,
-          jamSelesai: booking.jam_selesai,
-          keterangan: booking.keterangan,
-          createdAt: booking.created_at
-        })) || [];
-        
-        setBookings(transformedData);
-      } else {
-        // Fallback to localStorage
-        const savedBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-        setBookings(savedBookings);
+      if (error) {
+        console.error('Error loading bookings:', error);
+        return;
       }
+
+      const transformedData = data?.map(booking => ({
+        id: booking.id,
+        tanggal: booking.tanggal,
+        namaPeminjam: booking.nama_peminjam,
+        ruangan: booking.ruangan,
+        jamMulai: booking.jam_mulai,
+        jamSelesai: booking.jam_selesai,
+        keterangan: booking.keterangan,
+        createdAt: booking.created_at
+      })) || [];
+      
+      setBookings(transformedData);
     } catch (error) {
       console.error('Error loading bookings:', error);
     }
@@ -102,29 +96,22 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     if (!bookingToDelete) return;
     
     try {
-      if (isSupabaseConfigured) {
-        const { error } = await supabase
-          .from('bookings')
-          .delete()
-          .eq('id', bookingToDelete);
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingToDelete);
 
-        if (error) {
-          console.error('Error deleting booking:', error);
-          toast({
-            title: "Gagal menghapus",
-            description: "Terjadi kesalahan saat menghapus peminjaman.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        await loadBookings();
-      } else {
-        // Fallback to localStorage
-        const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete);
-        setBookings(updatedBookings);
-        localStorage.setItem('roomBookings', JSON.stringify(updatedBookings));
+      if (error) {
+        console.error('Error deleting booking:', error);
+        toast({
+          title: "Gagal menghapus",
+          description: "Terjadi kesalahan saat menghapus peminjaman.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      await loadBookings();
       
       toast({
         title: "Peminjaman dihapus",

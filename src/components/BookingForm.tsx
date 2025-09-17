@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, CalendarDays } from 'lucide-react';
 import { TimePicker24 } from './TimePicker24';
 import { BookingFormData } from '@/types/booking';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface BookingFormProps {
   onBookingAdded: () => void;
@@ -51,81 +51,48 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
 
   const checkBookingConflict = async (newBooking: BookingFormData): Promise<string | null> => {
     try {
-      // Try Supabase first, fallback to localStorage
-      if (isSupabaseConfigured) {
-        const { data: existingBookings, error } = await supabase
-          .from('bookings')
-          .select('*')
-          .eq('ruangan', newBooking.ruangan)
-          .eq('tanggal', newBooking.tanggal);
+      const { data: existingBookings, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('ruangan', newBooking.ruangan)
+        .eq('tanggal', newBooking.tanggal);
 
-        if (error) {
-          console.error('Error checking conflicts:', error);
-          return null;
-        }
+      if (error) {
+        console.error('Error checking conflicts:', error);
+        return 'Gagal memeriksa konflik jadwal.';
+      }
 
-        if (!existingBookings) return null;
+      if (!existingBookings) return null;
 
-        for (const booking of existingBookings) {
-          const existingStart = booking.jam_mulai;
-          const existingEnd = booking.jam_selesai;
-          const newStart = newBooking.jamMulai;
-          const newEnd = newBooking.jamSelesai;
-          
-          const timeToMinutes = (time: string) => {
-            const [hours, minutes] = time.split(':').map(Number);
-            return hours * 60 + minutes;
-          };
-          
-          const existingStartMin = timeToMinutes(existingStart);
-          const existingEndMin = timeToMinutes(existingEnd);
-          const newStartMin = timeToMinutes(newStart);
-          const newEndMin = timeToMinutes(newEnd);
-          
-          if (
-            (newStartMin >= existingStartMin && newStartMin < existingEndMin) ||
-            (newEndMin > existingStartMin && newEndMin <= existingEndMin) ||
-            (newStartMin <= existingStartMin && newEndMin >= existingEndMin)
-          ) {
-            return `Konflik jadwal! ${booking.ruangan} sudah dipesan oleh ${booking.nama_peminjam} pada ${existingStart}-${existingEnd}`;
-          }
-        }
-      } else {
-        // Fallback to localStorage
-        const existingBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
+      for (const booking of existingBookings) {
+        const existingStart = booking.jam_mulai;
+        const existingEnd = booking.jam_selesai;
+        const newStart = newBooking.jamMulai;
+        const newEnd = newBooking.jamSelesai;
         
-        for (const booking of existingBookings) {
-          if (booking.ruangan === newBooking.ruangan && booking.tanggal === newBooking.tanggal) {
-            const existingStart = booking.jamMulai || booking.jam;
-            const existingEnd = booking.jamSelesai || booking.jam;
-            const newStart = newBooking.jamMulai;
-            const newEnd = newBooking.jamSelesai;
-            
-            const timeToMinutes = (time: string) => {
-              const [hours, minutes] = time.split(':').map(Number);
-              return hours * 60 + minutes;
-            };
-            
-            const existingStartMin = timeToMinutes(existingStart);
-            const existingEndMin = timeToMinutes(existingEnd);
-            const newStartMin = timeToMinutes(newStart);
-            const newEndMin = timeToMinutes(newEnd);
-            
-            if (
-              (newStartMin >= existingStartMin && newStartMin < existingEndMin) ||
-              (newEndMin > existingStartMin && newEndMin <= existingEndMin) ||
-              (newStartMin <= existingStartMin && newEndMin >= existingEndMin)
-            ) {
-              return `Konflik jadwal! ${booking.ruangan} sudah dipesan oleh ${booking.namaPeminjam} pada ${existingStart}-${existingEnd}`;
-            }
-          }
+        const timeToMinutes = (time: string) => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        
+        const existingStartMin = timeToMinutes(existingStart);
+        const existingEndMin = timeToMinutes(existingEnd);
+        const newStartMin = timeToMinutes(newStart);
+        const newEndMin = timeToMinutes(newEnd);
+        
+        if (
+          (newStartMin >= existingStartMin && newStartMin < existingEndMin) ||
+          (newEndMin > existingStartMin && newEndMin <= existingEndMin) ||
+          (newStartMin <= existingStartMin && newEndMin >= existingEndMin)
+        ) {
+          return `Konflik jadwal! ${booking.ruangan} sudah dipesan oleh ${booking.nama_peminjam} pada ${existingStart}-${existingEnd}`;
         }
       }
       
       return null;
     } catch (error) {
       console.error('Error checking booking conflicts:', error);
-      return null;
+      return 'Terjadi kesalahan saat memeriksa konflik.';
     }
   };
 
@@ -183,36 +150,21 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
     setIsSubmitting(true);
 
     try {
-      // Try Supabase first, fallback to localStorage  
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase
-          .from('bookings')
-          .insert([
-            {
-              tanggal: normalizedData.tanggal,
-              nama_peminjam: normalizedData.namaPeminjam,
-              ruangan: normalizedData.ruangan,
-              jam_mulai: normalizedData.jamMulai,
-              jam_selesai: normalizedData.jamSelesai,
-              keterangan: normalizedData.keterangan
-            }
-          ])
-          .select();
+      const { error } = await supabase
+        .from('bookings')
+        .insert([
+          {
+            tanggal: normalizedData.tanggal,
+            nama_peminjam: normalizedData.namaPeminjam,
+            ruangan: normalizedData.ruangan,
+            jam_mulai: normalizedData.jamMulai,
+            jam_selesai: normalizedData.jamSelesai,
+            keterangan: normalizedData.keterangan
+          }
+        ]);
 
-        if (error) {
-          throw error;
-        }
-      } else {
-        // Fallback to localStorage
-        const bookingData = {
-          id: Date.now().toString(),
-          ...normalizedData,
-          createdAt: new Date().toISOString()
-        };
-
-        const existingBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-        const updatedBookings = [...existingBookings, bookingData];
-        localStorage.setItem('roomBookings', JSON.stringify(updatedBookings));
+      if (error) {
+        throw error;
       }
 
       toast({

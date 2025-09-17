@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Clock, Calendar } from 'lucide-react';
 import { BookingData } from '@/types/booking';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface ActiveBookingsProps {
   refreshTrigger: number;
@@ -21,58 +21,33 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
 
   const loadActiveBookings = async () => {
     try {
-      if (isSupabaseConfigured) {
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        const currentTime = now.toTimeString().slice(0, 5);
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().slice(0, 5);
 
-        const { data, error } = await supabase
-          .from('bookings')
-          .select('*')
-          .eq('tanggal', today)
-          .gt('jam_selesai', currentTime);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('tanggal', today)
+        .gt('jam_selesai', currentTime);
 
-        if (error) {
-          console.error('Error loading active bookings:', error);
-          return;
-        }
-
-        const transformedData = data?.map(booking => ({
-          id: booking.id,
-          tanggal: booking.tanggal,
-          namaPeminjam: booking.nama_peminjam,
-          ruangan: booking.ruangan,
-          jamMulai: booking.jam_mulai,
-          jamSelesai: booking.jam_selesai,
-          keterangan: booking.keterangan,
-          createdAt: booking.created_at
-        })) || [];
-        
-        setBookings(transformedData);
-      } else {
-        // Fallback to localStorage
-        const savedBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        const currentTime = now.toTimeString().slice(0, 5);
-        
-        const activeBookings = savedBookings.filter((booking: BookingData) => {
-          if (booking.tanggal !== today) return false;
-          
-          if (booking.jamSelesai) {
-            return booking.jamSelesai > currentTime;
-          }
-          
-          if (booking.jamMulai) {
-            const endTime = addHours(booking.jamMulai, 2);
-            return endTime > currentTime;
-          }
-          
-          return false;
-        });
-        
-        setBookings(activeBookings);
+      if (error) {
+        console.error('Error loading active bookings:', error);
+        return;
       }
+
+      const transformedData = data?.map(booking => ({
+        id: booking.id,
+        tanggal: booking.tanggal,
+        namaPeminjam: booking.nama_peminjam,
+        ruangan: booking.ruangan,
+        jamMulai: booking.jam_mulai,
+        jamSelesai: booking.jam_selesai,
+        keterangan: booking.keterangan,
+        createdAt: booking.created_at
+      })) || [];
+      
+      setBookings(transformedData);
     } catch (error) {
       console.error('Error loading active bookings:', error);
     }
