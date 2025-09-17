@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, CalendarDays } from 'lucide-react';
 import { TimePicker24 } from './TimePicker24';
 import { BookingFormData } from '@/types/booking';
+import { supabase } from '@/lib/supabase';
 
 interface BookingFormProps {
   onBookingAdded: () => void;
@@ -48,14 +49,24 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
     return `${h.slice(-2)}:${m.slice(0, 2)}`;
   };
 
-  const checkBookingConflict = (newBooking: BookingFormData): string | null => {
-    const existingBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-    
-    for (const booking of existingBookings) {
-      // Check if same room and same date
-      if (booking.ruangan === newBooking.ruangan && booking.tanggal === newBooking.tanggal) {
-        const existingStart = booking.jamMulai || booking.jam; // Support old format
-        const existingEnd = booking.jamSelesai || booking.jam; // Support old format
+  const checkBookingConflict = async (newBooking: BookingFormData): Promise<string | null> => {
+    try {
+      const { data: existingBookings, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('ruangan', newBooking.ruangan)
+        .eq('tanggal', newBooking.tanggal);
+
+      if (error) {
+        console.error('Error checking conflicts:', error);
+        return null;
+      }
+
+      if (!existingBookings) return null;
+
+      for (const booking of existingBookings) {
+        const existingStart = booking.jam_mulai;
+        const existingEnd = booking.jam_selesai;
         const newStart = newBooking.jamMulai;
         const newEnd = newBooking.jamSelesai;
         
@@ -76,12 +87,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
           (newEndMin > existingStartMin && newEndMin <= existingEndMin) ||
           (newStartMin <= existingStartMin && newEndMin >= existingEndMin)
         ) {
-          return `Konflik jadwal! ${booking.ruangan} sudah dipesan oleh ${booking.namaPeminjam} pada ${existingStart}-${existingEnd}`;
+          return `Konflik jadwal! ${booking.ruangan} sudah dipesan oleh ${booking.nama_peminjam} pada ${existingStart}-${existingEnd}`;
         }
       }
+      
+      return null;
+    } catch (error) {
+      console.error('Error checking booking conflicts:', error);
+      return null;
     }
-    
-    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +139,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
     const normalizedData: BookingFormData = { ...formData, jamMulai: start, jamSelesai: end };
 
     // Check for booking conflicts
-    const conflictMessage = checkBookingConflict(normalizedData);
+    const conflictMessage = await checkBookingConflict(normalizedData);
     if (conflictMessage) {
       toast({
         title: "Peminjaman ditolak",
@@ -138,19 +152,24 @@ export const BookingForm: React.FC<BookingFormProps> = ({ onBookingAdded }) => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([
+          {
+            tanggal: normalizedData.tanggal,
+            nama_peminjam: normalizedData.namaPeminjam,
+            ruangan: normalizedData.ruangan,
+            jam_mulai: normalizedData.jamMulai,
+            jam_selesai: normalizedData.jamSelesai,
+            keterangan: normalizedData.keterangan
+          }
+        ])
+        .select();
 
-      const bookingData = {
-        id: Date.now().toString(),
-        ...normalizedData,
-        createdAt: new Date().toISOString()
-      };
-
-      // Save to localStorage
-      const existingBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-      const updatedBookings = [...existingBookings, bookingData];
-      localStorage.setItem('roomBookings', JSON.stringify(updatedBookings));
+      if (error) {
+        throw error;
+      }
 
       toast({
         title: "Peminjaman berhasil ditambahkan!",

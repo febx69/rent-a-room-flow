@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Clock, Calendar } from 'lucide-react';
 import { BookingData } from '@/types/booking';
+import { supabase } from '@/lib/supabase';
 
 interface ActiveBookingsProps {
   refreshTrigger: number;
@@ -18,31 +19,39 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
     loadActiveBookings();
   }, [refreshTrigger]);
 
-  const loadActiveBookings = () => {
-    const savedBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const currentTime = now.toTimeString().slice(0, 5);
-    
-    // Filter only active bookings (today's bookings that haven't ended yet)
-    const activeBookings = savedBookings.filter((booking: BookingData) => {
-      if (booking.tanggal !== today) return false;
-      
-      // If booking has jamSelesai, check if it hasn't ended yet
-      if (booking.jamSelesai) {
-        return booking.jamSelesai > currentTime;
+  const loadActiveBookings = async () => {
+    try {
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().slice(0, 5);
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('tanggal', today)
+        .gt('jam_selesai', currentTime);
+
+      if (error) {
+        console.error('Error loading active bookings:', error);
+        return;
       }
+
+      // Transform data to match frontend interface
+      const transformedData = data?.map(booking => ({
+        id: booking.id,
+        tanggal: booking.tanggal,
+        namaPeminjam: booking.nama_peminjam,
+        ruangan: booking.ruangan,
+        jamMulai: booking.jam_mulai,
+        jamSelesai: booking.jam_selesai,
+        keterangan: booking.keterangan,
+        createdAt: booking.created_at
+      })) || [];
       
-      // If booking has only jamMulai, check if it hasn't started or is within 2 hours
-      if (booking.jamMulai) {
-        const endTime = addHours(booking.jamMulai, 2);
-        return endTime > currentTime;
-      }
-      
-      return false;
-    });
-    
-    setBookings(activeBookings);
+      setBookings(transformedData);
+    } catch (error) {
+      console.error('Error loading active bookings:', error);
+    }
   };
 
   const addHours = (timeString: string, hours: number): string => {

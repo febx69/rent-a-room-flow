@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Download, Trash2, History, ChevronUp, ChevronDown } from 'lucide-react';
 import { BookingData } from '@/types/booking';
+import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface BookingHistoryProps {
@@ -29,9 +30,34 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     loadBookings();
   }, [refreshTrigger]);
 
-  const loadBookings = () => {
-    const savedBookings = JSON.parse(localStorage.getItem('roomBookings') || '[]');
-    setBookings(savedBookings);
+  const loadBookings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading bookings:', error);
+        return;
+      }
+
+      // Transform data to match frontend interface
+      const transformedData = data?.map(booking => ({
+        id: booking.id,
+        tanggal: booking.tanggal,
+        namaPeminjam: booking.nama_peminjam,
+        ruangan: booking.ruangan,
+        jamMulai: booking.jam_mulai,
+        jamSelesai: booking.jam_selesai,
+        keterangan: booking.keterangan,
+        createdAt: booking.created_at
+      })) || [];
+      
+      setBookings(transformedData);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    }
   };
 
   const handleSort = (field: keyof BookingData) => {
@@ -67,17 +93,40 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!bookingToDelete) return;
     
-    const updatedBookings = bookings.filter(booking => booking.id !== bookingToDelete);
-    setBookings(updatedBookings);
-    localStorage.setItem('roomBookings', JSON.stringify(updatedBookings));
-    
-    toast({
-      title: "Peminjaman dihapus",
-      description: "Data peminjaman berhasil dihapus dari sistem.",
-    });
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingToDelete);
+
+      if (error) {
+        console.error('Error deleting booking:', error);
+        toast({
+          title: "Gagal menghapus",
+          description: "Terjadi kesalahan saat menghapus peminjaman.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Refresh the bookings list
+      await loadBookings();
+      
+      toast({
+        title: "Peminjaman dihapus",
+        description: "Data peminjaman berhasil dihapus dari sistem.",
+      });
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast({
+        title: "Gagal menghapus",
+        description: "Terjadi kesalahan saat menghapus peminjaman.",
+        variant: "destructive",
+      });
+    }
     
     setDeleteDialogOpen(false);
     setBookingToDelete(null);
