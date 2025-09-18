@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BookingForm } from './BookingForm';
 import { BookingHistory } from './BookingHistory';
 import { ActiveBookings } from './ActiveBookings';
-import { LogOut, User, Crown, Building2 } from 'lucide-react';
+import { LogOut, User, Crown, Building2, HeartHandshake } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -21,15 +21,17 @@ export const Dashboard: React.FC = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 bg-gradient-primary rounded-xl flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-white" />
+              {/* Logo placeholder - replace with actual health department logo */}
+              <div className="h-12 w-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-card">
+                <HeartHandshake className="h-6 w-6 text-white" />
+                {/* <img src="/path-to-your-health-dept-logo.png" alt="Logo Dinas Kesehatan" className="h-8 w-8 object-contain" /> */}
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                   Sistem Peminjaman Ruangan
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Kelola peminjaman ruangan dengan mudah dan efisien
+                  Dinas Kesehatan - Manajemen Fasilitas Terintegrasi
                 </p>
               </div>
             </div>
@@ -78,11 +80,11 @@ export const Dashboard: React.FC = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              <span>© 2024 Sistem Peminjaman Ruangan</span>
+              <HeartHandshake className="h-4 w-4" />
+              <span>© 2024 Dinas Kesehatan - Sistem Peminjaman Ruangan</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              Sistem manajemen peminjaman ruangan yang efisien
+              Sistem manajemen fasilitas kesehatan yang terintegrasi
             </div>
           </div>
         </div>

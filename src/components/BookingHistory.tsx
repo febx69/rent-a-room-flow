@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Download, Trash2, History, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Download, Trash2, History, ChevronUp, ChevronDown, Edit, Filter } from 'lucide-react';
 import { BookingData } from '@/types/booking';
 import { supabase } from '@/lib/supabase';
+import { EditBookingDialog } from './EditBookingDialog';
+import { FilterDialog, FilterOptions } from './FilterDialog';
 import * as XLSX from 'xlsx';
 
 interface BookingHistoryProps {
@@ -18,17 +20,27 @@ interface BookingHistoryProps {
 
 export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }) => {
   const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<BookingData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof BookingData>('tanggal');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [bookingToEdit, setBookingToEdit] = useState<BookingData | null>(null);
+  const [exportFilterOpen, setExportFilterOpen] = useState(false);
+  const [deleteFilterOpen, setDeleteFilterOpen] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState<FilterOptions | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     loadBookings();
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    applyCurrentFilter();
+  }, [bookings, currentFilter]);
 
   const loadBookings = async () => {
     try {
@@ -59,6 +71,57 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     }
   };
 
+  const applyCurrentFilter = () => {
+    if (!currentFilter) {
+      setFilteredBookings(bookings);
+      return;
+    }
+
+    let filtered = [...bookings];
+
+    switch (currentFilter.type) {
+      case 'month':
+        if (currentFilter.month && currentFilter.year) {
+          filtered = bookings.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            return bookingDate.getMonth() + 1 === currentFilter.month &&
+                   bookingDate.getFullYear() === currentFilter.year;
+          });
+        }
+        break;
+      case 'quarter':
+        if (currentFilter.quarter && currentFilter.year) {
+          filtered = bookings.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            const month = bookingDate.getMonth() + 1;
+            const quarter = Math.ceil(month / 3);
+            return quarter === currentFilter.quarter &&
+                   bookingDate.getFullYear() === currentFilter.year;
+          });
+        }
+        break;
+      case 'year':
+        if (currentFilter.year) {
+          filtered = bookings.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            return bookingDate.getFullYear() === currentFilter.year;
+          });
+        }
+        break;
+      case 'custom':
+        if (currentFilter.startDate && currentFilter.endDate) {
+          const startDate = currentFilter.startDate.toISOString().split('T')[0];
+          const endDate = currentFilter.endDate.toISOString().split('T')[0];
+          filtered = bookings.filter(booking => 
+            booking.tanggal >= startDate && booking.tanggal <= endDate
+          );
+        }
+        break;
+    }
+
+    setFilteredBookings(filtered);
+  };
+
   const handleSort = (field: keyof BookingData) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -69,7 +132,7 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
   };
 
   const filteredAndSortedBookings = useMemo(() => {
-    let filtered = bookings.filter(booking =>
+    let filtered = filteredBookings.filter(booking =>
       Object.values(booking).some(value =>
         value.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
@@ -85,7 +148,12 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     });
 
     return filtered;
-  }, [bookings, searchTerm, sortField, sortDirection]);
+  }, [filteredBookings, searchTerm, sortField, sortDirection]);
+
+  const handleEdit = (booking: BookingData) => {
+    setBookingToEdit(booking);
+    setEditDialogOpen(true);
+  };
 
   const handleDelete = (id: string) => {
     setBookingToDelete(id);
@@ -130,15 +198,85 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
     setBookingToDelete(null);
   };
 
-  const handleExportExcel = () => {
-    const exportData = filteredAndSortedBookings.map((booking, index) => ({
+  const handleBulkDelete = async (filter: FilterOptions) => {
+    try {
+      let query = supabase.from('bookings').delete();
+
+      switch (filter.type) {
+        case 'month':
+          if (filter.month && filter.year) {
+            const startDate = new Date(filter.year, filter.month - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(filter.year, filter.month, 0).toISOString().split('T')[0];
+            query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+          }
+          break;
+        case 'quarter':
+          if (filter.quarter && filter.year) {
+            const startMonth = (filter.quarter - 1) * 3;
+            const startDate = new Date(filter.year, startMonth, 1).toISOString().split('T')[0];
+            const endDate = new Date(filter.year, startMonth + 3, 0).toISOString().split('T')[0];
+            query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+          }
+          break;
+        case 'year':
+          if (filter.year) {
+            const startDate = `${filter.year}-01-01`;
+            const endDate = `${filter.year}-12-31`;
+            query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+          }
+          break;
+        case 'custom':
+          if (filter.startDate && filter.endDate) {
+            const startDate = filter.startDate.toISOString().split('T')[0];
+            const endDate = filter.endDate.toISOString().split('T')[0];
+            query = query.gte('tanggal', startDate).lte('tanggal', endDate);
+          }
+          break;
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        console.error('Error bulk deleting bookings:', error);
+        toast({
+          title: "Gagal menghapus",
+          description: "Terjadi kesalahan saat menghapus data peminjaman.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await loadBookings();
+      
+      toast({
+        title: "Data berhasil dihapus",
+        description: "Data peminjaman pada periode yang dipilih berhasil dihapus.",
+      });
+    } catch (error) {
+      console.error('Error bulk deleting bookings:', error);
+      toast({
+        title: "Gagal menghapus",
+        description: "Terjadi kesalahan saat menghapus data peminjaman.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = (filter?: FilterOptions) => {
+    let dataToExport = filteredAndSortedBookings;
+    
+    if (filter) {
+      setCurrentFilter(filter);
+      // Filter will be applied automatically by useEffect
+      dataToExport = applyFilterToData(bookings, filter);
+    }
+
+    const exportData = dataToExport.map((booking, index) => ({
       No: index + 1,
-      Tanggal: booking.tanggal,
+      Tanggal: formatDate(booking.tanggal),
       'Nama Peminjam': booking.namaPeminjam,
       'Ruangan/Lantai': booking.ruangan,
-      'Rentang Jam': booking.jamMulai && booking.jamSelesai 
-        ? `${booking.jamMulai} - ${booking.jamSelesai}`
-        : booking.jam || 'N/A',
+      'Rentang Jam': getTimeRange(booking),
       Keterangan: booking.keterangan
     }));
 
@@ -157,12 +295,103 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
 
     worksheet['!cols'] = Object.values(maxWidth).map(width => ({ width }));
 
-    XLSX.writeFile(workbook, `History_Peminjaman_Ruangan_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const periodName = getFilterPeriodName(filter);
+    XLSX.writeFile(workbook, `History_Peminjaman_${periodName}_${new Date().toISOString().split('T')[0]}.xlsx`);
     
     toast({
       title: "Export berhasil!",
       description: "File Excel telah berhasil diunduh.",
     });
+  };
+
+  const applyFilterToData = (data: BookingData[], filter: FilterOptions): BookingData[] => {
+    switch (filter.type) {
+      case 'month':
+        if (filter.month && filter.year) {
+          return data.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            return bookingDate.getMonth() + 1 === filter.month &&
+                   bookingDate.getFullYear() === filter.year;
+          });
+        }
+        break;
+      case 'quarter':
+        if (filter.quarter && filter.year) {
+          return data.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            const month = bookingDate.getMonth() + 1;
+            const quarter = Math.ceil(month / 3);
+            return quarter === filter.quarter &&
+                   bookingDate.getFullYear() === filter.year;
+          });
+        }
+        break;
+      case 'year':
+        if (filter.year) {
+          return data.filter(booking => {
+            const bookingDate = new Date(booking.tanggal);
+            return bookingDate.getFullYear() === filter.year;
+          });
+        }
+        break;
+      case 'custom':
+        if (filter.startDate && filter.endDate) {
+          const startDate = filter.startDate.toISOString().split('T')[0];
+          const endDate = filter.endDate.toISOString().split('T')[0];
+          return data.filter(booking => 
+            booking.tanggal >= startDate && booking.tanggal <= endDate
+          );
+        }
+        break;
+    }
+    return data;
+  };
+
+  const getFilterPeriodName = (filter?: FilterOptions): string => {
+    if (!filter) return 'Semua';
+    
+    switch (filter.type) {
+      case 'month':
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 
+                       'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+        return `${months[(filter.month || 1) - 1]}_${filter.year}`;
+      case 'quarter':
+        return `Q${filter.quarter}_${filter.year}`;
+      case 'year':
+        return `${filter.year}`;
+      case 'custom':
+        if (filter.startDate && filter.endDate) {
+          const start = filter.startDate.toISOString().split('T')[0];
+          const end = filter.endDate.toISOString().split('T')[0];
+          return `${start}_to_${end}`;
+        }
+        return 'Custom';
+    }
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A';
+    // Convert HH:MM:SS to HH:MM
+    return timeString.slice(0, 5);
+  };
+
+  const getTimeRange = (booking: BookingData) => {
+    if (booking.jamMulai && booking.jamSelesai) {
+      return `${formatTime(booking.jamMulai)} - ${formatTime(booking.jamSelesai)}`;
+    }
+    if (booking.jamMulai) {
+      const endTime = addHours(booking.jamMulai, 2);
+      return `${formatTime(booking.jamMulai)} - ${formatTime(endTime)}`;
+    }
+    return 'N/A';
+  };
+
+  const addHours = (timeString: string, hours: number): string => {
+    const [h, m] = timeString.split(':').map(Number);
+    const totalMinutes = h * 60 + m + (hours * 60);
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMinutes = totalMinutes % 60;
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -205,14 +434,32 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
               />
             </div>
             {user?.role === 'admin' && bookings.length > 0 && (
-              <Button
-                onClick={handleExportExcel}
-                variant="outline"
-                className="hover:bg-success hover:text-success-foreground transition-colors duration-200"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Excel
-              </Button>
+              <>
+                <Button
+                  onClick={() => setCurrentFilter(null)}
+                  variant="outline"
+                  className="hover:bg-primary/10 transition-colors duration-200"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Reset Filter
+                </Button>
+                <Button
+                  onClick={() => setExportFilterOpen(true)}
+                  variant="outline"
+                  className="hover:bg-success hover:text-success-foreground transition-colors duration-200"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel
+                </Button>
+                <Button
+                  onClick={() => setDeleteFilterOpen(true)}
+                  variant="outline"
+                  className="hover:bg-destructive hover:text-destructive-foreground transition-colors duration-200"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Hapus Bulk
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -262,10 +509,9 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                       <SortIcon field="ruangan" />
                     </div>
                   </TableHead>
-                  
                   <TableHead>Rentang Jam</TableHead>
                   <TableHead>Keterangan</TableHead>
-                  {user?.role === 'admin' && <TableHead className="w-20">Aksi</TableHead>}
+                  {user?.role === 'admin' && <TableHead className="w-32">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -280,24 +526,31 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {booking.jamMulai && booking.jamSelesai 
-                        ? `${booking.jamMulai} - ${booking.jamSelesai}`
-                        : booking.jam || 'N/A'
-                      }
+                      {getTimeRange(booking)}
                     </TableCell>
                     <TableCell className="max-w-xs truncate" title={booking.keterangan}>
                       {booking.keterangan}
                     </TableCell>
                     {user?.role === 'admin' && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(booking.id)}
-                          className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(booking)}
+                            className="hover:bg-primary/10 hover:text-primary transition-colors duration-200"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(booking.id)}
+                            className="hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -307,6 +560,29 @@ export const BookingHistory: React.FC<BookingHistoryProps> = ({ refreshTrigger }
           </div>
         )}
       </CardContent>
+      
+      <EditBookingDialog
+        booking={bookingToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={loadBookings}
+      />
+
+      <FilterDialog
+        open={exportFilterOpen}
+        onOpenChange={setExportFilterOpen}
+        onApplyFilter={handleExportExcel}
+        title="Export Data Excel"
+        description="Pilih periode data yang ingin diekspor ke Excel."
+      />
+
+      <FilterDialog
+        open={deleteFilterOpen}
+        onOpenChange={setDeleteFilterOpen}
+        onApplyFilter={handleBulkDelete}
+        title="Hapus Data Bulk"
+        description="Pilih periode data yang ingin dihapus. HATI-HATI: Tindakan ini tidak dapat dibatalkan!"
+      />
       
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

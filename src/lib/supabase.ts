@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabaseConfig'
 
-if (
-  !SUPABASE_URL || SUPABASE_URL.startsWith('REPLACE') ||
-  !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.startsWith('REPLACE')
-) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error('Supabase belum dikonfigurasi: isi SUPABASE_URL dan SUPABASE_ANON_KEY di src/lib/supabaseConfig.ts')
 }
 

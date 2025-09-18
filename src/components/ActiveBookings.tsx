@@ -22,14 +22,14 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
   const loadActiveBookings = async () => {
     try {
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
+      const today = now.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('tanggal', today)
-        .gt('jam_selesai', currentTime);
+        .gte('tanggal', today)
+        .or(`tanggal.gt.${today},and(tanggal.eq.${today},jam_selesai.gt.${currentTime})`);
 
       if (error) {
         console.error('Error loading active bookings:', error);
@@ -79,13 +79,19 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
 
   const getTimeRange = (booking: BookingData) => {
     if (booking.jamMulai && booking.jamSelesai) {
-      return `${booking.jamMulai} - ${booking.jamSelesai}`;
+      return `${formatTime(booking.jamMulai)} - ${formatTime(booking.jamSelesai)}`;
     }
     if (booking.jamMulai) {
       const endTime = addHours(booking.jamMulai, 2);
-      return `${booking.jamMulai} - ${endTime}`;
+      return `${formatTime(booking.jamMulai)} - ${formatTime(endTime)}`;
     }
     return 'N/A';
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A';
+    // Convert HH:MM:SS to HH:MM
+    return timeString.slice(0, 5);
   };
 
   return (
@@ -97,9 +103,9 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
               <Clock className="h-5 w-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-xl">Peminjaman Aktif</CardTitle>
+              <CardTitle className="text-xl">Peminjaman Aktif & Mendatang</CardTitle>
               <CardDescription>
-                {filteredBookings.length} peminjaman yang sedang berlangsung
+                {filteredBookings.length} peminjaman yang sedang berlangsung atau akan datang
               </CardDescription>
             </div>
           </div>
@@ -122,9 +128,9 @@ export const ActiveBookings: React.FC<ActiveBookingsProps> = ({ refreshTrigger }
             <div className="h-24 w-24 mx-auto bg-muted rounded-full flex items-center justify-center mb-4">
               <Calendar className="h-12 w-12 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Tidak ada peminjaman aktif</h3>
+            <h3 className="text-lg font-semibold mb-2">Tidak ada peminjaman aktif atau mendatang</h3>
             <p className="text-muted-foreground">
-              {searchTerm ? 'Tidak ada hasil yang cocok dengan pencarian' : 'Belum ada peminjaman untuk hari ini'}
+              {searchTerm ? 'Tidak ada hasil yang cocok dengan pencarian' : 'Belum ada peminjaman untuk hari ini dan mendatang'}
             </p>
           </div>
         ) : (
